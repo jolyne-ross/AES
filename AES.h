@@ -4,6 +4,7 @@
 #include <string>
 #include <array>
 #include <vector>
+#include <stdexcept>
 
 using Byte = uint8_t;
 using Word = std::array<Byte, 4>;
@@ -12,8 +13,11 @@ using Block = std::array<Byte, 16>;
 class AES {
 public:
     // constructor (expand to have round, and size params)
-    AES(const Block& key, int rounds) : key(key), rounds(rounds){ ExpandRoundKey(rounds); };
-    AES(const std::string& key, int rounds) : key(_hex_to_Block(key)), rounds(rounds){ ExpandRoundKey(rounds); };
+    AES(const Block& key, int rounds) : key(key), rounds(rounds){ 
+        if(rounds != 1) { throw std::invalid_argument("Only one round supported"); }
+        ExpandRoundKey(key, rounds); 
+    }
+    AES(const std::string& key, int rounds) : AES(_hex_to_Block(key), rounds) {}
 
     // Encrypt/Decrypt functions
     Block Encrypt(const Block& plain_text);
@@ -81,7 +85,7 @@ private:
     static Word _xor_word(Word& a, Word& b);
 
     // Functions
-    void ExpandRoundKey(int rounds) const;
+    void ExpandRoundKey(const Block& key, int rounds) const;
     void AddRoundKey(const Block& round_key) const;
 
     void SubBytes();
