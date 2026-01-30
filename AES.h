@@ -10,6 +10,7 @@ using Byte = uint8_t;
 using Word = std::array<Byte, 4>;
 using Block = std::array<Byte, 16>;
 
+// AES Header!! Talia Jolyne Ross
 class AES {
 public:
     // constructor (expand to have round, and size params)
@@ -80,13 +81,13 @@ private:
     static Block _hex_to_Block(const std::string& hex);
 
     // word helpers
-    static Word _rot_Word(Word& w);
-    static Word _sub_Word(Word& w);
+    static void _rot_Word(Word& w, int len);
+    static void _sub_Word(Word& w);
     static Word _xor_word(Word& a, Word& b);
 
     // Functions
     void ExpandRoundKey(const Block& key, int rounds) const;
-    void AddRoundKey(const Block& round_key) const;
+    void AddRoundKey(const Block& round_key);
 
     void SubBytes();
     void INV_SubBytes();
