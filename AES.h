@@ -9,16 +9,16 @@ using Block = std::array<Byte, 16>;
 class AES {
 public:
     // constructor (expand to have round, and size params)
-    AES(const Block& key, int rounds) : key(key), rounds(rounds){
-        ExpandRoundKey(rounds);
-    };
+    AES(const Block& key, int rounds) : key(key), rounds(rounds){ ExpandRoundKey(rounds); };
+    AES(const std::string& key, int rounds) : key(_hex_to_Block(key)), rounds(rounds){ ExpandRoundKey(rounds); };
 
     // Encrypt/Decrypt functions
     Block Encrypt(const Block& plain_text);
-    Block Decrypt(const Block& cipher_text);
+    std::string Encrypt(const std::string& plain_text) { Encrypt(_hex_to_Block(plain_text)); }
 
-    // Conversion
-    static Block Hex_to_Block(const std::string& hex);
+    Block Decrypt(const Block& cipher_text);
+    std::string Decrypt(const std::string& plain_text) { Decrypt(_hex_to_Block(plain_text)); }
+
 
 private:
     static constexpr Byte S_BOX[256] = {
@@ -69,7 +69,8 @@ private:
     std::vector<Block> round_keys;
 
     // conversion helpers
-    static std::string _block_to_hex(const Block& b);
+    static std::string _Block_to_hex(const Block& b);
+    static Block _hex_to_Block(const std::string& hex);
 
     // word helpers
     static Word _rot_Word(Word w);
