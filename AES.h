@@ -1,7 +1,10 @@
+#pragma once
+
 #include <cstdint>
 #include <string>
 #include <array>
 #include <vector>
+
 using Byte = uint8_t;
 using Word = std::array<Byte, 4>;
 using Block = std::array<Byte, 16>;
@@ -78,7 +81,7 @@ private:
     static Word _xor_word(Word& a, Word& b);
 
     // Functions
-    void ExpandRoundKey(int rounds) const; // just for assignment
+    void ExpandRoundKey(int rounds) const;
     void AddRoundKey(const Block& round_key) const;
 
     void SubBytes();
