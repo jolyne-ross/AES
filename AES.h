@@ -76,12 +76,12 @@ private:
     std::vector<Block> round_keys;
 
     // conversion helpers
-    static std::string _Block_to_hex(const Block& b);
+    static std::string _Block_to_hex(const Block& B);
     static Block _hex_to_Block(const std::string& hex);
 
     // word helpers
-    static Word _rot_Word(Word w);
-    static Word _sub_Word(Word w);
+    static Word _rot_Word(Word& w);
+    static Word _sub_Word(Word& w);
     static Word _xor_word(Word& a, Word& b);
 
     // Functions
