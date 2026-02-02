@@ -135,7 +135,7 @@ void AES::MixColumns() {
     for(int c=0; c<4; c++) {
         Word col = {state[c], state[c+4], state[c+8], state[c+12]};
 
-        _INV_mix_column(col);
+        _mix_column(col);
         state[c] = col[0]; state[c+4] = col[1]; state[c+8] = col[2]; state[c+12] = col[3]; 
     }
 }
@@ -196,7 +196,7 @@ void AES::INV_MixColumns() {
     for(int c=0; c<4; c++) {
         Word col = {state[c], state[c+4], state[c+8], state[c+12]};
 
-        _mix_column(col);
+        _INV_mix_column(col);
         state[c] = col[0]; state[c+4] = col[1]; state[c+8] = col[2]; state[c+12] = col[3]; 
     }
 }
@@ -210,6 +210,7 @@ Block AES::Decrypt(const Block& plain_text) {
     GetRoundKey(rounds, rk);
     AddRoundKey(rk);
 
+
     // middle rounds
     for(int i=rounds-1; i>=0; i--) {
         GetRoundKey(i, rk);
@@ -221,4 +222,11 @@ Block AES::Decrypt(const Block& plain_text) {
     }
 
     // last round not implemented
+    if(rounds!=1) {
+        INV_SubBytes();
+        INV_ShiftRows();
+
+        GetRoundKey(0, rk);
+        AddRoundKey(rk);
+    }
 }

@@ -14,7 +14,7 @@ class AES {
 public:
     // constructor (expand to have round, and size params)
     AES(const Block& key, int rounds) : key(key), rounds(rounds){ 
-        if(rounds != 1) { throw std::invalid_argument("Only one round supported"); }
+        if(rounds != 10) { throw std::invalid_argument("Only ten round supported"); }
         ExpandRoundKey(key); 
     }
     AES(const std::string& key, int rounds) : AES(_hex_to_Block(key), rounds) {}
