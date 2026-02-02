@@ -6,9 +6,8 @@
 #include <vector>
 #include <stdexcept>
 
-using Byte = uint8_t;
-using Word = std::array<Byte, 4>;
-using Block = std::array<Byte, 16>;
+using Word = std::array<uint8_t, 4>;
+using Block = std::array<uint8_t, 16>;
 
 // AES Header!! Talia Jolyne Ross
 class AES {
@@ -16,20 +15,24 @@ public:
     // constructor (expand to have round, and size params)
     AES(const Block& key, int rounds) : key(key), rounds(rounds){ 
         if(rounds != 1) { throw std::invalid_argument("Only one round supported"); }
-        ExpandRoundKey(key, rounds); 
+        ExpandRoundKey(key); 
     }
     AES(const std::string& key, int rounds) : AES(_hex_to_Block(key), rounds) {}
 
     // Encrypt/Decrypt functions
     Block Encrypt(const Block& plain_text);
-    std::string Encrypt(const std::string& plain_text) { Encrypt(_hex_to_Block(plain_text)); }
+    std::string Encrypt(const std::string& plain_text) { 
+        return _Block_to_hex(Encrypt(_hex_to_Block(plain_text))); 
+    }
 
     Block Decrypt(const Block& cipher_text);
-    std::string Decrypt(const std::string& plain_text) { Decrypt(_hex_to_Block(plain_text)); }
+    std::string Decrypt(const std::string& plain_text) {
+        return _Block_to_hex(Decrypt(_hex_to_Block(plain_text))); 
+    }
 
 
 private:
-    static constexpr Byte S_BOX[256] = {
+    static constexpr uint8_t S_BOX[256] = {
         0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
         0xca, 0x82, 0xc9, 0x7d, 0xfa, 0x59, 0x47, 0xf0, 0xad, 0xd4, 0xa2, 0xaf, 0x9c, 0xa4, 0x72, 0xc0,
         0xb7, 0xfd, 0x93, 0x26, 0x36, 0x3f, 0xf7, 0xcc, 0x34, 0xa5, 0xe5, 0xf1, 0x71, 0xd8, 0x31, 0x15,
@@ -47,7 +50,7 @@ private:
         0xe1, 0xf8, 0x98, 0x11, 0x69, 0xd9, 0x8e, 0x94, 0x9b, 0x1e, 0x87, 0xe9, 0xce, 0x55, 0x28, 0xdf,
         0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16
     };
-    static constexpr Byte INV_S_BOX[256] = {
+    static constexpr uint8_t INV_S_BOX[256] = {
         0x52, 0x09, 0x6a, 0xd5, 0x30, 0x36, 0xa5, 0x38, 0xbf, 0x40, 0xa3, 0x9e, 0x81, 0xf3, 0xd7, 0xfb,
         0x7c, 0xe3, 0x39, 0x82, 0x9b, 0x2f, 0xff, 0x87, 0x34, 0x8e, 0x43, 0x44, 0xc4, 0xde, 0xe9, 0xcb,
         0x54, 0x7b, 0x94, 0x32, 0xa6, 0xc2, 0x23, 0x3d, 0xee, 0x4c, 0x95, 0x0b, 0x42, 0xfa, 0xc3, 0x4e,
@@ -65,7 +68,7 @@ private:
         0xa0, 0xe0, 0x3b, 0x4d, 0xae, 0x2a, 0xf5, 0xb0, 0xc8, 0xeb, 0xbb, 0x3c, 0x83, 0x53, 0x99, 0x61,
         0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26, 0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d
     };
-    static constexpr Byte Rcon[11] = { 0x00,
+    static constexpr uint8_t Rcon[11] = { 0x00,
         0x01, 0x02, 0x04, 0x08, 0x10,
         0x20, 0x40, 0x80, 0x1B, 0x36 
     };
@@ -74,20 +77,22 @@ private:
     Block key;
     Block state;
     int rounds;
-    std::vector<Block> round_keys;
+    std::array<Word, 44> round_keys;
 
     // conversion helpers
+    static uint8_t _hex_char_to_4bit(const char& c);
     static std::string _Block_to_hex(const Block& B);
     static Block _hex_to_Block(const std::string& hex);
 
     // word helpers
-    static void _rot_Word(Word& w, int len);
-    static void _sub_Word(Word& w);
-    static Word _xor_word(Word& a, Word& b);
+    static Word _rot_Word(const Word& w, int len);
+    static Word _sub_Word(const Word& w);
+    static Word _xor_word(const Word& a, const Word& b);
 
     // Functions
-    void ExpandRoundKey(const Block& key, int rounds) const;
+    void ExpandRoundKey(const Block& key);
     void AddRoundKey(const Block& round_key);
+    void GetRoundKey(int round, Block& rk);
 
     void SubBytes();
     void INV_SubBytes();
@@ -97,4 +102,9 @@ private:
 
     void MixColumns();
     void INV_MixColumns();
+
+    // mix helpers
+    uint8_t _xBy2(uint8_t x);
+    uint8_t _mult(uint8_t x, uint8_t y);
+    void _mix_column(Word& col);
 };

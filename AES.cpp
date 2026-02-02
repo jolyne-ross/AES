@@ -4,15 +4,15 @@
 // Implementation File for AES.h!! Talia Jolyne Ross
 
 // Word Helpers
-void AES::_rot_Word(Word& w, int len) {
-    w = { w[(0+len) % 4], w[(1+len)%4], w[(2+len)%4], w[(3+len)%4] };
+Word AES::_rot_Word(const Word& w, int len) {
+    return { w[(0+len) % 4], w[(1+len)%4], w[(2+len)%4], w[(3+len)%4] };
 }
 
-void AES::_sub_Word(Word& w) {
-    w = { S_BOX[w[0]], S_BOX[w[1]], S_BOX[w[2]], S_BOX[w[3]] };
+Word AES::_sub_Word(const Word& w) {
+    return { S_BOX[w[0]], S_BOX[w[1]], S_BOX[w[2]], S_BOX[w[3]] };
 }
 
-Word AES::_xor_word(Word& a, Word& b) {
+Word AES::_xor_word(const Word& a, const Word& b) {
     return {
         uint8_t(a[0]^b[0]),
         uint8_t(a[1]^b[1]),
@@ -26,12 +26,12 @@ std::string AES::_Block_to_hex(const Block& B) {
     std::string out;
     out.reserve(32);
     
-    for(Byte byte : B) {
-        
+    for(uint8_t byte : B) {
+        char hi = (byte >> 4);
     }
 }
 
-uint8_t _hex_char_to_4bit(const char& c) {
+uint8_t AES::_hex_char_to_4bit(const char& c) {
     if(c>='0' && c<='9') return c-'0';
     if(c>='A' && c<='F') return c-'A'+10;
     if(c>='a' && c<='f') return c-'a'+10;
@@ -49,6 +49,37 @@ Block AES::_hex_to_Block(const std::string& hex) {
         block[j] = (_hex_char_to_4bit(hex[i]) << 4) | _hex_char_to_4bit(hex[i+1]);
 
     return block;
+}
+
+// Round Key Generation; taken from textbook pseudocode mainly
+void AES::ExpandRoundKey(const Block& key) {
+    // Generate rounds+1 # of keys.
+    Word temp;
+    for(int i=0; i<4; i++) {
+        round_keys[i] = {
+            key[4*i],
+            key[4*i+1],
+            key[4*i+2],
+            key[4*i+3]
+        }; 
+    }
+
+    for(int i=4; i<44; i++) {
+        temp = round_keys[i-1];
+        if((i%4)==0) {
+            temp = _xor_word(_sub_Word(_rot_Word(temp, 1)), {Rcon[i/4], 0x00, 0x00, 0x00});
+        }
+        round_keys[i] = _xor_word(round_keys[i-4], temp);
+    }
+}
+
+void AES::GetRoundKey(int round, Block& rk) {
+    for(int i=0; i<4; i++) {
+        rk[4*i] = round_keys[round*4+i][0];
+        rk[4*i+1] = round_keys[round*4+i][1];
+        rk[4*i+2] = round_keys[round*4+i][2];
+        rk[4*i+3] = round_keys[round*4+i][3];
+    }
 }
 
 // Encryption Functions
@@ -70,23 +101,23 @@ void AES::ShiftRows() {
     }
 }
 
-Byte xBy2(Byte x) { // see textbook 6.4 Mix columns 
+uint8_t AES::_xBy2(uint8_t x) { // see textbook 6.4 Mix columns 
     x = (x<<1) ^ ((x & 0x80) ? 0x1B : 0x00);
 }
 
-Byte multiply(Byte x, Byte y) {
+uint8_t AES::_mult(uint8_t x, uint8_t y) {
     if(y==1) return x;
-    if(y==2) return xBy2(x);
-    if(y==3) return xBy2(x) ^ x; // see 6.6
+    if(y==2) return _xBy2(x);
+    if(y==3) return _xBy2(x) ^ x; // see 6.6
 }
 
-void _mix_column(Word& col) {
+void AES::_mix_column(Word& col) {
     uint8_t s0 = col[0], s1 = col[1], s2=col[2], s3=col[3];
 
-    col[0] = multiply(s0,2) ^ multiply(s1, 3) ^ multiply(s2, 1) ^ multiply(s3, 1);
-    col[1] = multiply(s0,1) ^ multiply(s1, 2) ^ multiply(s2, 3) ^ multiply(s3, 1);
-    col[2] = multiply(s0,1) ^ multiply(s1, 1) ^ multiply(s2, 2) ^ multiply(s3, 3);
-    col[3] = multiply(s0,3) ^ multiply(s1, 1) ^ multiply(s2, 1) ^ multiply(s3, 2);
+    col[0] = _mult(s0,2) ^ _mult(s1, 3) ^ _mult(s2, 1) ^ _mult(s3, 1);
+    col[1] = _mult(s0,1) ^ _mult(s1, 2) ^ _mult(s2, 3) ^ _mult(s3, 1);
+    col[2] = _mult(s0,1) ^ _mult(s1, 1) ^ _mult(s2, 2) ^ _mult(s3, 3);
+    col[3] = _mult(s0,3) ^ _mult(s1, 1) ^ _mult(s2, 1) ^ _mult(s3, 2);
 }
 
 void AES::MixColumns() {
@@ -97,3 +128,31 @@ void AES::MixColumns() {
         state[c] = col[c]; state[c+4] = col[c+4]; state[c+8] = col[c+8]; state[c+12] = col[c+12]; 
     }
 }
+
+// Main Encrypt Function
+Block AES::Encrypt(const Block& plain_text) {
+    // init state
+    state = plain_text;
+    Block rk;
+    
+    // Grab roundkey 1 and add
+
+    GetRoundKey(0, rk);
+    AddRoundKey(rk);
+
+    // middle rounds
+    for(int i=1; i<rounds; i++) {
+        GetRoundKey(i, rk);
+
+        SubBytes();
+        ShiftRows();
+        MixColumns();
+        AddRoundKey(rk);
+    }
+
+    // final round -- NOT IMPLEMENTED
+}
+
+// Decryption Functions
+
+
