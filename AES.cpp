@@ -21,7 +21,7 @@ Word AES::_xor_word(const Word& a, const Word& b) {
     };
 }
 
-// Conversion Helpers
+// Conversion Helpers; LARGELY NOT WORKING!!! or not tested; just used bits/chars for final main.cpp
 std::string AES::_Block_to_hex(const Block& B) {
     std::string out;
     out.reserve(32);
@@ -213,6 +213,7 @@ void AES::INV_ShiftRows() {
 void AES::_INV_mix_column(Word& col) {
     uint8_t s0 = col[0], s1 = col[1], s2=col[2], s3=col[3];
 
+    // See 6.4
     col[0] = _mult(s0,14) ^ _mult(s1,11) ^ _mult(s2,13) ^ _mult(s3, 9);
     col[1] = _mult(s0, 9) ^ _mult(s1,14) ^ _mult(s2,11) ^ _mult(s3,13);
     col[2] = _mult(s0,13) ^ _mult(s1, 9) ^ _mult(s2,14) ^ _mult(s3,11);
