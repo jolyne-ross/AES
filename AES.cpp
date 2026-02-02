@@ -1,4 +1,4 @@
-#include <AES.h>
+#include "AES.h"
 #include <regex>
 
 // Implementation File for AES.h!! Talia Jolyne Ross
@@ -135,7 +135,7 @@ void AES::MixColumns() {
     for(int c=0; c<4; c++) {
         Word col = {state[c], state[c+4], state[c+8], state[c+12]};
 
-        _mix_column(col);
+        _INV_mix_column(col);
         state[c] = col[0]; state[c+4] = col[1]; state[c+8] = col[2]; state[c+12] = col[3]; 
     }
 }
