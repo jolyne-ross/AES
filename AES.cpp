@@ -96,19 +96,25 @@ void AES::SubBytes() {
 void AES::ShiftRows() {
     for(int i=4; i<16; i+=4) {
         Word w = {state[i], state[i+1], state[i+2], state[i+3]};
-        _rot_Word(w, i/4);
+        w = _rot_Word(w, i/4);
         state[i]=w[0]; state[i+1]=w[1]; state[i+2]=w[2]; state[i+3]=w[3];
     }
 }
 
 uint8_t AES::_xBy2(uint8_t x) { // see textbook 6.4 Mix columns 
-    x = (x<<1) ^ ((x & 0x80) ? 0x1B : 0x00);
+    return (x<<1) ^ ((x & 0x80) ? 0x1B : 0x00);
 }
 
+// See 6.6
 uint8_t AES::_mult(uint8_t x, uint8_t y) {
     if(y==1) return x;
     if(y==2) return _xBy2(x);
-    if(y==3) return _xBy2(x) ^ x; // see 6.6
+    if(y==3) return _xBy2(x) ^ x;
+    if(y==9) return _xBy2(_xBy2(_xBy2(x))) ^ x;
+    if(y==11) return _xBy2(_xBy2(_xBy2(x)) ^ x) ^ x;
+    if(y==13) return _xBy2(_xBy2(_xBy2(x) ^ x)) ^ x;
+    if(y==14) return _xBy2(_xBy2(_xBy2(x) ^ x) ^ x);
+    return 0;
 }
 
 void AES::_mix_column(Word& col) {
@@ -125,7 +131,7 @@ void AES::MixColumns() {
         Word col = {state[c], state[c+4], state[c+8], state[c+12]};
 
         _mix_column(col);
-        state[c] = col[c]; state[c+4] = col[c+4]; state[c+8] = col[c+8]; state[c+12] = col[c+12]; 
+        state[c] = col[0]; state[c+4] = col[1]; state[c+8] = col[2]; state[c+12] = col[3]; 
     }
 }
 
@@ -135,13 +141,12 @@ Block AES::Encrypt(const Block& plain_text) {
     state = plain_text;
     Block rk;
     
-    // Grab roundkey 1 and add
-
+    // Grab roundkey 0 and add
     GetRoundKey(0, rk);
     AddRoundKey(rk);
 
     // middle rounds
-    for(int i=1; i<rounds; i++) {
+    for(int i=1; i<rounds || i==1; i++) {
         GetRoundKey(i, rk);
 
         SubBytes();
@@ -150,9 +155,43 @@ Block AES::Encrypt(const Block& plain_text) {
         AddRoundKey(rk);
     }
 
-    // final round -- NOT IMPLEMENTED
+    if(rounds!=1) {
+        GetRoundKey(rounds+1, rk);
+
+        SubBytes();
+        ShiftRows();
+        AddRoundKey(rk);
+    }
 }
 
 // Decryption Functions
+void AES::INV_SubBytes() {
+    for(int i=0; i<state.size(); i++)
+        state[i]=INV_S_BOX[state[i]];
+}
 
+void AES::INV_ShiftRows() {
+    for(int i=4; i<16; i+=4) {
+        Word w = {state[i], state[i+1], state[i+2], state[i+3]};
+        w = _rot_Word(w, 4-i/4);
+        state[i]=w[0]; state[i+1]=w[1]; state[i+2]=w[2]; state[i+3]=w[3];
+    }
+}
 
+void AES::_INV_mix_column(Word& col) {
+    uint8_t s0 = col[0], s1 = col[1], s2=col[2], s3=col[3];
+
+    col[0] = _mult(s0,14) ^ _mult(s1,11) ^ _mult(s2,13) ^ _mult(s3, 9);
+    col[1] = _mult(s0, 9) ^ _mult(s1,14) ^ _mult(s2,11) ^ _mult(s3,13);
+    col[2] = _mult(s0,14) ^ _mult(s1, 9) ^ _mult(s2,14) ^ _mult(s3,11);
+    col[3] = _mult(s0,11) ^ _mult(s1,13) ^ _mult(s2, 9) ^ _mult(s3,14);
+}
+
+void AES::INV_MixColumns() {
+    for(int c=0; c<4; c++) {
+        Word col = {state[c], state[c+4], state[c+8], state[c+12]};
+
+        _mix_column(col);
+        state[c] = col[0]; state[c+4] = col[1]; state[c+8] = col[2]; state[c+12] = col[3]; 
+    }
+}

@@ -106,5 +106,6 @@ private:
     // mix helpers
     uint8_t _xBy2(uint8_t x);
     uint8_t _mult(uint8_t x, uint8_t y);
+    void _INV_mix_column(Word& col);
     void _mix_column(Word& col);
 };
