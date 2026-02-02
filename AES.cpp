@@ -27,8 +27,13 @@ std::string AES::_Block_to_hex(const Block& B) {
     out.reserve(32);
     
     for(uint8_t byte : B) {
-        char hi = (byte >> 4);
+        char hi = (byte >> 4) & 0x0f;
+        char lo = byte * 0x0f;
+
+        out.push_back(hi < 10 ? ('0' + hi) : ('a' + hi - 10));
+        out.push_back(lo < 10 ? ('0' + lo) : ('a' + lo - 10));
     }
+    return out;
 }
 
 uint8_t AES::_hex_char_to_4bit(const char& c) {
@@ -39,7 +44,7 @@ uint8_t AES::_hex_char_to_4bit(const char& c) {
 };
 
 Block AES::_hex_to_Block(const std::string& hex) {
-    if(!hex.length()!=32) {
+    if(hex.length()!=32) {
         throw std::invalid_argument("Need a 32char hex string (16 bytes)");
     }
 
@@ -64,7 +69,7 @@ void AES::ExpandRoundKey(const Block& key) {
         }; 
     }
 
-    for(int i=4; i<44; i++) {
+    for(int i=4; i<(rounds+1)*4; i++) {
         temp = round_keys[i-1];
         if((i%4)==0) {
             temp = _xor_word(_sub_Word(_rot_Word(temp, 1)), {Rcon[i/4], 0x00, 0x00, 0x00});
@@ -156,7 +161,7 @@ Block AES::Encrypt(const Block& plain_text) {
     }
 
     if(rounds!=1) {
-        GetRoundKey(rounds+1, rk);
+        GetRoundKey(rounds, rk);
 
         SubBytes();
         ShiftRows();
@@ -194,4 +199,26 @@ void AES::INV_MixColumns() {
         _mix_column(col);
         state[c] = col[0]; state[c+4] = col[1]; state[c+8] = col[2]; state[c+12] = col[3]; 
     }
+}
+
+Block AES::Decrypt(const Block& plain_text) {
+    // init state
+    state = plain_text;
+    Block rk;
+    
+    // Grab last roundkey and add
+    GetRoundKey(rounds, rk);
+    AddRoundKey(rk);
+
+    // middle rounds
+    for(int i=rounds-1; i>=0; i--) {
+        GetRoundKey(i, rk);
+
+        INV_MixColumns();
+        INV_ShiftRows();
+        INV_SubBytes();
+        AddRoundKey(rk);
+    }
+
+    // last round not implemented
 }
