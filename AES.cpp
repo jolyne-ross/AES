@@ -1,5 +1,5 @@
-#include <AES.h>
-#include <regex>
+#include "AES.h"
+#include <iostream>
 
 // Implementation File for AES.h!! Talia Jolyne Ross
 
@@ -28,7 +28,7 @@ std::string AES::_Block_to_hex(const Block& B) {
     
     for(uint8_t byte : B) {
         char hi = (byte >> 4) & 0x0f;
-        char lo = byte * 0x0f;
+        char lo = byte & 0x0f;
 
         out.push_back(hi < 10 ? ('0' + hi) : ('a' + hi - 10));
         out.push_back(lo < 10 ? ('0' + lo) : ('a' + lo - 10));
@@ -145,19 +145,44 @@ Block AES::Encrypt(const Block& plain_text) {
     // init state
     state = plain_text;
     Block rk;
+
+    std::cout<<"\nPlain Text: [";
+    for(int i=0; i<16; i++) std::cout<<plain_text[i];
+    std::cout<<"]\nKey: [";
+    for(int i=0; i<16; i++) std::cout<<key[i];
     
     // Grab roundkey 0 and add
     GetRoundKey(0, rk);
     AddRoundKey(rk);
+    std::cout<<"]\n\nRound 0\nAddRoundKey():\nState: [";
+    for(int i=0; i<16; i++) std::cout<<std::hex<<static_cast<int>(state[i]);
+    std::cout<<"]\nRound Key: [";
+    for(int i=0; i<16; i++) std::cout<<std::hex<<static_cast<int>(rk[i]);
+    std::cout<<"]\n";
 
     // middle rounds
     for(int i=1; i<rounds || i==1; i++) {
-        GetRoundKey(i, rk);
+        std::cout<<"\nRound: "<<i<<"\n";
 
         SubBytes();
+        std::cout<<"\nSubBytes()\n State: [";
+        for(int j=0; j<16; j++) std::cout<<std::hex<<static_cast<int>(state[j]);
+
         ShiftRows();
+        std::cout<<"]\nShiftRows()\n State: [";
+        for(int j=0; j<16; j++) std::cout<<std::hex<<static_cast<int>(state[j]);
+
         MixColumns();
+        std::cout<<"]\nMixColumns()\n State: [";
+        for(int j=0; j<16; j++) std::cout<<std::hex<<static_cast<int>(state[j]);
+
+        GetRoundKey(i, rk);
         AddRoundKey(rk);
+        std::cout<<"]\nAddRoundKey()\nState: [";
+        for(int j=0; j<16; j++) std::cout<<std::hex<<static_cast<int>(state[j]);
+        std::cout<<"]\nRound Key: [";
+        for(int j=0; j<16; j++) std::cout<<std::hex<<static_cast<int>(rk[j]);
+        std::cout<<"]\n";
     }
 
     if(rounds!=1) {
@@ -167,6 +192,8 @@ Block AES::Encrypt(const Block& plain_text) {
         ShiftRows();
         AddRoundKey(rk);
     }
+
+    return state;
 }
 
 // Decryption Functions
@@ -188,7 +215,7 @@ void AES::_INV_mix_column(Word& col) {
 
     col[0] = _mult(s0,14) ^ _mult(s1,11) ^ _mult(s2,13) ^ _mult(s3, 9);
     col[1] = _mult(s0, 9) ^ _mult(s1,14) ^ _mult(s2,11) ^ _mult(s3,13);
-    col[2] = _mult(s0,14) ^ _mult(s1, 9) ^ _mult(s2,14) ^ _mult(s3,11);
+    col[2] = _mult(s0,13) ^ _mult(s1, 9) ^ _mult(s2,14) ^ _mult(s3,11);
     col[3] = _mult(s0,11) ^ _mult(s1,13) ^ _mult(s2, 9) ^ _mult(s3,14);
 }
 
@@ -196,29 +223,55 @@ void AES::INV_MixColumns() {
     for(int c=0; c<4; c++) {
         Word col = {state[c], state[c+4], state[c+8], state[c+12]};
 
-        _mix_column(col);
+        _INV_mix_column(col);
         state[c] = col[0]; state[c+4] = col[1]; state[c+8] = col[2]; state[c+12] = col[3]; 
     }
 }
 
-Block AES::Decrypt(const Block& plain_text) {
+Block AES::Decrypt(const Block& cipher_text) {
     // init state
-    state = plain_text;
+    state = cipher_text;
     Block rk;
+
+    std::cout<<"\nCipher Text: [";
+    for(int i=0; i<16; i++) std::cout<<std::hex<<static_cast<int>(cipher_text[i]);
+    std::cout<<"]\nKey: [";
+    for(int i=0; i<16; i++) std::cout<<key[i];
     
-    // Grab last roundkey and add
+    // Grab the last roundkey and add
     GetRoundKey(rounds, rk);
     AddRoundKey(rk);
+    std::cout<<"]\n\nRound 1\nAddRoundKey():\nState: [";
+    for(int i=0; i<16; i++) std::cout<<std::hex<<static_cast<int>(state[i]);
+    std::cout<<"]\nRound Key: [";
+    for(int i=0; i<16; i++) std::cout<<std::hex<<static_cast<int>(rk[i]);
+    std::cout<<"]\n";
 
     // middle rounds
     for(int i=rounds-1; i>=0; i--) {
-        GetRoundKey(i, rk);
+        std::cout<<"\nRound: "<<i<<"\n";
 
         INV_MixColumns();
+        std::cout<<"\nINV_MixColumns()\n State: [";
+        for(int j=0; j<16; j++) std::cout<<std::hex<<static_cast<int>(state[j]);
+
         INV_ShiftRows();
+        std::cout<<"]\nINV_ShiftRows()\n State: [";
+        for(int j=0; j<16; j++) std::cout<<std::hex<<static_cast<int>(state[j]);
+
         INV_SubBytes();
+        std::cout<<"]\nINV_SubBytes()\n State: [";
+        for(int j=0; j<16; j++) std::cout<<std::hex<<static_cast<int>(state[j]);
+
+        GetRoundKey(i, rk);
         AddRoundKey(rk);
+        std::cout<<"]\nAddRoundKey()\nState: [";
+        for(int j=0; j<16; j++) std::cout<<std::hex<<static_cast<int>(state[j]);
+        std::cout<<"]\nRound Key: [";
+        for(int j=0; j<16; j++) std::cout<<std::hex<<static_cast<int>(rk[j]);
+        std::cout<<"]\n";
     }
 
     // last round not implemented
+    return state;
 }
